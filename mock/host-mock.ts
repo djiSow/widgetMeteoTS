@@ -10,13 +10,13 @@ export const hostmock: HostMock = {
      * - proxyMode: true => makes a real http request
      * - proxyMode: false => calls the mocked version defined in this file
      */
-    proxyMode: false,
+    proxyMode: true,
 
     /**
      * If proxyMode == true, when a direct connect request is made this secretkey will be used.
      * It should be identical to the one configured in the remote service that will be accessed.
      */
-    secretKey: "mysec",
+    secretKey: "5ysec",
 
     /**
      * If proxyMode == true, when a direct connect request is made this login will be used

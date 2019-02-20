@@ -30,7 +30,17 @@ module.exports =
                     test: /\.json$/,
                     loader: "json",
                     include: "/resources/"
+                },
+                {
+                    test: /\.(svg|png|jpg|gif)$/,
+                    loader: "url-loader",
+                    options: {
+                        name: "asset/image/[name].[ext]",
+                        publicPath: ""
+                    }
                 }
+                
+                
             ]
         },
         resolve: {

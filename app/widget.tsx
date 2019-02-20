@@ -1,155 +1,122 @@
-import * as React from "react";
-import T from 'i18n-react';
-import * as highcharts from 'highcharts'
-
-// this import will only work with the typescript options
-// esModuleInterop & allowSyntheticDefaultImports
-import HighchartsReact from "highcharts-react-official";
-
+import *  as React from "react";
 import { WidgetProps } from "@talentsoft-opensource/integration-widget-contract"
+import '../asset/widget.less'; 
+import '../asset/image/logo-soleil.png';
 
-import { uxpTheme, standardColors } from './theme'
-
-import '../asset/widget.less';
-
-import * as en from '../resources/en-gb.json'
-import * as fr from '../resources/fr-fr.json'
-const languagePacks = {
-    'en-gb': en,
-    'fr-fr': fr
+interface Weather {
+    name: string;
+    temp: number;
+    sky: string;
 }
 
-type Language = keyof typeof languagePacks;
-type LanguagePack = typeof en.labels;
-
-const DEFAULT_LANGUAGE: Language = 'en-gb';
-
-highcharts.setOptions(uxpTheme);
-
-function getPointsPresentationData(languagePack: LanguagePack): { [id: string]: {name: string, color: string} } {
-    return {
-        'ToDo': {
-            name: languagePack["partner-serie-tocomplete"],
-            color: standardColors.purple
-        },
-        'InProgress': {
-            name: languagePack["partner-serie-invalidation"],
-            color: standardColors.lightBlue
-        },
-        'ToValidate': {
-            name: languagePack["partner-serie-tovalidate"],
-            color: standardColors.lightGrey
-        },
-        'Validated': {
-            name: languagePack["partner-serie-validated"],
-            color: standardColors.orange
-        },
-    };
+interface WidgetState {
+    data:Weather[];
+    textvalue:string;
+    test:string;
 }
 
-
-export class Widget extends React.Component<WidgetProps, {data: highcharts.DataPoint[]}> {
+export class Widget extends React.Component<WidgetProps,WidgetState> {
     constructor(props: WidgetProps) {
         super(props);
-        this.state = { data: [] };
-
-        this.defineActionHeaders();
-    }
-
-    private getData() {
-        const {myTSHostService} = this.props;
-
-        myTSHostService.requestExternalResource({verb: 'GET', url: 'https://mockurl/api'} )
-            .then((response) => {
-                let data = [];
-                try {
-                    data = JSON.parse(response.body);
-                } catch (e) {
-                    console.log(e);
-                }
-                const valuePoints = data as highcharts.DataPoint[];
-                this.setState({ data: valuePoints });
-                myTSHostService.setDataIsLoaded();
-            })
-    }
-
-    private setTextsOrDefault() {
-        T.setTexts(this.getLanguagePack());
-    }
-
-    private getLanguage(): Language {
-        let language: string = this.props.language;
-        if (!(language in languagePacks)) {
-            language = DEFAULT_LANGUAGE;
+        this.defineActionHeaders(); 
+        this.state = { 
+            data:[],
+            textvalue : "",
+            test:"" 
         }
-        return language as Language;
+    }
+    
+    componentDidMount(){
+        const {myTSHostService} = this.props;
+        myTSHostService.setDataIsLoaded();
     }
 
-    private getLanguagePack() {
-        return languagePacks[this.getLanguage()].labels;
-    }
-
-    private getOptions(languagePack: LanguagePack): highcharts.Options {
-        return {
-            series: [
-                {
-                    type: "pie",
-                    name: 'MyStatsGraphTooltip',
-                    innerSize: '50%',
-                    cursor: 'default',
-                }
-            ],
-            title: {
-                text: ''
-            },
-            tooltip: {
-                pointFormat: languagePack["partner-tooltip"],
-                outside: true
-            },
-            chart: {
-                width: 370,
-                height: 400
-            }
-        };
+    public getweather(c:string) {
+        const {myTSHostService} = this.props;
+        const url = 'https://api.openweathermap.org/data/2.5/weather';
+        let queryString = `?q=${c}&units=metric&appid=7848d30cce738e7887f77f176bb76f2c`;
+       
+        myTSHostService.requestExternalResource({verb: 'GET', url: url + queryString })
+        .then((response) => {
+            let data = [];
+            try {
+                data = JSON.parse(response.body);
+            } 
+            catch (e) {
+                console.log(e);
+            }  
+            
+            let weather:Weather= {
+                name:data.name,
+                temp:data.main.temp,
+                sky:data.weather[0].main
+            };
+                 
+            this.setState(prevState => ({
+                data: [...prevState.data, weather]
+            }));
+        })
     }
 
     defineActionHeaders() {
         const {myTSHostService} = this.props;
-        // Set to true to define your widget as enlargeable
+        // Set to true to define your widget Logo as enlargeable
         myTSHostService.setHeaderActionConfiguration({enlargeable: false});
     }
 
-    public componentDidMount() {
-        this.getData();
+    handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        this.setState({ textvalue: e.target.value });
+        console.log(e)
     }
 
+    upperCaseF = (a:string) => {
+        return a.charAt(0).toUpperCase() +a.slice(1);
+    }
+
+    getRandomTemp = (max: number) => {
+        return Math.floor(Math.random() * Math.floor(max));
+    } 
+    
+    remove(idx: number) {  
+        // Concatening original items array returns new array - this is important!
+        const items : Weather[] = this.state.data;
+        items.splice(idx, 1);
+        this.setState({data: items});
+    }
+
+    //récupère la donnée entrée dans le textvalue et lyaa push dans le array 
+    handleAddTodoItem = () => {
+        let city = this.upperCaseF(this.state.textvalue);
+        if (city !== "" && !this.state.data.find(c => c.name === city)) {
+            this.getweather(city);
+        }
+    }
+
+
     public render() {
-        this.setTextsOrDefault();
-        const languagePack = this.getLanguagePack();
-        const presentation = getPointsPresentationData(languagePack);
-        const expenseData = this.state.data.map(p => {
-            const newPoint = {...p};
-            if (newPoint.id) {
-                newPoint.name = presentation[newPoint.id].name;
-                newPoint.color = presentation[newPoint.id].color;
-            }
-            return newPoint;
-        });
-        const options = this.getOptions(languagePack);
-        options.series![0].data = expenseData
-        return (
-            <div className="widget__container">
-                <div className="widget__wrapper">
-                    <T.span text="partner-title" className="widget-title" />
-                    <T.span
-                        text={{key:"partner-from-to", start:'2018-6-15', end:"2018-12-15"}}
-                        className="widget-subtitle" />
-                    <HighchartsReact
-                        highcharts={highcharts}
-                        options={options}
-                    />
+        const items = this.state.data.map((item:Weather, i:number) => {
+                      
+            return (
+             
+                <div>
+                    <li key={i}>
+                        <div>{item.name +" "+ item.temp+"°c"+" "+item.sky+" "} 
+                        <img src={require("../asset/image/logo-soleil.png")} id='myimage'/>
+                            <button onClick={() => this.remove(i) }>-</button>
+                        </div>
+                    </li>
                 </div>
+            );
+        }); 
+
+        
+      
+        return (
+            <div>
+                {items}
+                <input type="text" placeholder="ex : dublin" className="text" onChange={this.handleChange}/> 
+                <button className="addbutton" onClick={this.handleAddTodoItem}> + </button>
             </div>
-        );
+        );      
     }
 }

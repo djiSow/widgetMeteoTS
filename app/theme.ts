@@ -1,5 +1,4 @@
 import { GlobalOptions, numberFormat } from 'highcharts'
-
 export const uxpTheme: GlobalOptions = {
     chart: {
         backgroundColor: 'none',
@@ -80,3 +79,4 @@ export const standardColors = {
     black: '#000000',
     transparent: 'transparent'
 };
+

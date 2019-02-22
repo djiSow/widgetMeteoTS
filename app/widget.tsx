@@ -3,10 +3,13 @@ import { WidgetProps } from "@talentsoft-opensource/integration-widget-contract"
 import '../asset/widget.less'; 
 import '../asset/image/logo-soleil.png';
 
+
 interface Weather {
     name: string;
     temp: number;
     sky: string;
+    desc:string;
+    country:string;
 }
 
 interface WidgetState {
@@ -27,17 +30,25 @@ export class Widget extends React.Component<WidgetProps,WidgetState> {
     }
     
     componentDidMount(){
+        this.loadCities();
+    }
+
+    loadCities() {
+        this.getweather('Paris');
+        this.getweather('London');
+
         const {myTSHostService} = this.props;
         myTSHostService.setDataIsLoaded();
     }
 
-    public getweather(c:string) {
+    public async getweather(city:string) {
         const {myTSHostService} = this.props;
         const url = 'https://api.openweathermap.org/data/2.5/weather';
-        let queryString = `?q=${c}&units=metric&appid=7848d30cce738e7887f77f176bb76f2c`;
+        let queryString = `?q=${city}&units=metric&appid=7848d30cce738e7887f77f176bb76f2c`;
        
-        myTSHostService.requestExternalResource({verb: 'GET', url: url + queryString })
-        .then((response) => {
+        const response = await myTSHostService.requestExternalResource({verb: 'GET', url: url + queryString });
+
+        if (response !== null){
             let data = [];
             try {
                 data = JSON.parse(response.body);
@@ -45,17 +56,26 @@ export class Widget extends React.Component<WidgetProps,WidgetState> {
             catch (e) {
                 console.log(e);
             }  
-            
-            let weather:Weather= {
-                name:data.name,
-                temp:data.main.temp,
-                sky:data.weather[0].main
-            };
-                 
-            this.setState(prevState => ({
-                data: [...prevState.data, weather]
-            }));
-        })
+            if (data.cod === 200){
+                let weather:Weather= {
+                    name:data.name,
+                    temp:data.main.temp,
+                    sky:data.weather[0].icon,
+                    desc:data.weather[0].main,
+                    country:data.sys.country,
+                };
+                    
+                this.setState(prevState => ({
+                    data: [...prevState.data, weather]
+                }));
+            }
+            else {
+                console.warn(city + ": " + data.message);
+            }
+        }
+        else {
+            alert("this city may not exist try again...")
+        }
     }
 
     defineActionHeaders() {
@@ -84,7 +104,7 @@ export class Widget extends React.Component<WidgetProps,WidgetState> {
         this.setState({data: items});
     }
 
-    //récupère la donnée entrée dans le textvalue et lyaa push dans le array 
+    //récupère la donnée entrée dans le textvalue et la push dans le array 
     handleAddTodoItem = () => {
         let city = this.upperCaseF(this.state.textvalue);
         if (city !== "" && !this.state.data.find(c => c.name === city)) {
@@ -95,27 +115,48 @@ export class Widget extends React.Component<WidgetProps,WidgetState> {
 
     public render() {
         const items = this.state.data.map((item:Weather, i:number) => {
-                      
+            let urlImage = 'http://openweathermap.org/img/w/' + item.sky + '.png';
+
             return (
-             
-                <div>
-                    <li key={i}>
-                        <div>{item.name +" "+ item.temp+"°c"+" "+item.sky+" "} 
-                        <img src={require("../asset/image/logo-soleil.png")} id='myimage'/>
-                            <button onClick={() => this.remove(i) }>-</button>
-                        </div>
-                    </li>
-                </div>
+                <tr key={i}>
+                    <td title={item.country}>{item.name}</td> 
+                    <td>{Math.round(item.temp)+'°C'}</td>
+                    <td title={item.desc}> 
+                        <img src={urlImage} id='myimage'/>
+                    </td>
+                    <td>
+                        <button onClick={() => this.remove(i) }>
+                            <i className="icon-trash" />
+                        </button>
+                    </td>    
+                </tr>
             );
         }); 
-
-        
-      
+             
         return (
             <div>
-                {items}
-                <input type="text" placeholder="ex : dublin" className="text" onChange={this.handleChange}/> 
-                <button className="addbutton" onClick={this.handleAddTodoItem}> + </button>
+                <div className="input-city">
+                    <input type="text" placeholder="ex : dublin" className="inner-div" onChange={this.handleChange}  />
+                    <button className="addButton" onClick={this.handleAddTodoItem}> 
+                        <i className="icon-add"/>
+                    </button>
+                </div>
+
+                <div className="weather-cities">
+                    <table className="weather-table">
+                        <thead>
+                            <tr>
+                                <th>City</th>
+                                <th>Temperature</th>
+                                <th>Weather</th>
+                                <th>Cancel</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {items}
+                        </tbody>
+                    </table>              
+                </div>
             </div>
         );      
     }

@@ -8,7 +8,7 @@ interface Weather {
     name: string;
     temp: number;
     sky: string;
-    desc:string;
+    desc:string; //description des icones
     country:string;
 }
 
